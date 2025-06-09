@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function Success() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [isDataSaved, setIsDataSaved] = useState(false);
@@ -109,5 +109,27 @@ export default function Success() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center py-12">
+      <div className="max-w-lg mx-auto text-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-12">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-6"></div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-4">Processing...</h1>
+          <p className="text-slate-600">Confirming your payment details</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Success() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <SuccessContent />
+    </Suspense>
   );
 } 
