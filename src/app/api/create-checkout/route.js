@@ -74,6 +74,17 @@ export async function POST(request) {
       console.log(`Created new customer: ${customer.id} for email: ${email}`);
     }
 
+    // Get the base URL for redirects
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
+                   'http://localhost:3000';
+
+    console.log('Environment variables:');
+    console.log('NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL);
+    console.log('VERCEL_URL:', process.env.VERCEL_URL);
+    console.log('Using baseUrl:', baseUrl);
+    console.log('Success URL will be:', `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`);
+
     // Create checkout session with the customer
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
@@ -85,8 +96,8 @@ export async function POST(request) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || 'http://localhost:3000'}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL}` || 'http://localhost:3000'}/cancel`,
+      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/cancel`,
       metadata: {
         customerId: customer.id,
         firstName: firstName,
