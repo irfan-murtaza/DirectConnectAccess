@@ -130,7 +130,7 @@ export async function POST(request) {
 
       <h4>🔄 Manage or Cancel Your Subscription:</h4>
       <p>If you ever need to update your payment info or cancel, you can do so anytime:</p>
-      <p><a href="https://directconnectaccess.com/manage-subscription" target="_blank">Manage My Subscription</a></p>
+      <p><a href="https://join.directconnectaccess.com/cancel" target="_blank">Manage My Subscription</a></p>
       <p>Or email us at <a href="mailto:info@directconnectaccess.com">info@directconnectaccess.com</a> and we’ll help you out.</p>
 
       <br/>
