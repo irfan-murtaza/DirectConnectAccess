@@ -131,7 +131,7 @@ export default function CheckoutForm() {
               ></path>
             </svg>
             <span>
-              <span className="text-red-500 font-medium">*</span> indicates
+              <span className="text-red-500 font-medium">*</span>
               required fields
             </span>
           </div>
