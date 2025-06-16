@@ -129,7 +129,8 @@
 
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import firebase from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { collection, doc, setDoc, updateDoc } from "firebase/firestore";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -212,9 +213,9 @@ export async function POST(request) {
     }
 
     // Prepare initial payment record in Firebase with 'failed'
-    const ref = firebase.firestore().collection("payments").doc();
-
-    await ref.set({
+    const paymentsCollection = collection(db, "payments");
+    const paymentDoc = doc(paymentsCollection); // auto-ID
+    await setDoc(paymentDoc, {
       firstName,
       lastName,
       email,
@@ -269,7 +270,7 @@ export async function POST(request) {
     });
 
     // Update the payment's status to 'pending'
-    await ref.update({
+    await updateDoc(paymentDoc, {
       status: "pending",
       checkoutId: session.id,
     });
