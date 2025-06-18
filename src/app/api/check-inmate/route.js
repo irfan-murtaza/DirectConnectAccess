@@ -1,9 +1,7 @@
-// app/api/check-inmate/route.js
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const inmateId = searchParams.get("inmateId");
 
-  // Validate input
   if (!inmateId) {
     return new Response(
       JSON.stringify({ error: "inmateId parameter is required" }),
