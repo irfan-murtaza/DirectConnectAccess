@@ -132,6 +132,7 @@ import Stripe from "stripe";
 import { db } from "@/lib/firebase";
 import { collection, doc, setDoc, updateDoc } from "firebase/firestore";
 
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
