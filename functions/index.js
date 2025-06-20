@@ -1,10 +1,22 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const stripe = require("stripe")(functions.config().stripe.secret_key);
+const nodemailer = require("nodemailer");
 
 admin.initializeApp();
 
 const db = admin.firestore();
+
+// TODO: Replace with your actual email service credentials
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com", // For Gmail
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: "irfantech456@gmail.com", // Your email address
+    pass: "wukc dqtl unlu ingb", // Your app password
+  },
+});
 
 // Function to handle the logic for creating or updating a subscriber
 const manageSubscriber = async (customer, invoice, isActive) => {
@@ -62,24 +74,115 @@ exports.stripeWebhook = functions.https.onRequest(async (request, response) => {
     return response.sendStatus(400);
   }
 
-  const invoice = event.data.object;
-
   try {
-    const customer = await stripe.customers.retrieve(invoice.customer);
-
-    // Log the entire customer object for debugging
-    console.log("Retrieved customer object from Stripe:", JSON.stringify(customer, null, 2));
-
     // Handle the event
     switch (event.type) {
-      case 'invoice.payment_succeeded':
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        const customer = await stripe.customers.retrieve(invoice.customer);
         console.log("Payment succeeded for:", customer.email);
         await manageSubscriber(customer, invoice, true);
+
+        // Create a Stripe Customer Portal session
+        const portalSession = await stripe.billingPortal.sessions.create({
+          customer: customer.id,
+          return_url: `${functions.config().next.public_app_url || 'http://localhost:3000'}/`,
+        });
+        const portalUrl = portalSession.url;
+
+        // Send confirmation email
+        const mailOptions = {
+          from: '"DirectConnect Access" <info@directconnectaccess.com>',
+          to: customer.email,
+          subject: "Subscription Confirmation",
+          html: `
+            <p><strong>You're All Set — DirectConnect Access is Ready</strong></p>
+            <p>Hi ${customer.name},</p>
+            <p>Thank you for subscribing to DirectConnect Access — you've just taken an important step toward keeping your loved one connected, uplifted, and empowered.</p>
+            <p><strong>📞 How It Works:</strong></p>
+            <p>Your loved one can now access our service directly from inside the facility.</p>
+            <p><strong>Have them dial:</strong><br><a href="tel:213-569-0899">(213) 569-0899</a></p>
+            <p>When prompted, they'll enter their Inmate ID to unlock their audio session.</p>
+            <p><strong>🔄 Manage or Cancel Your Subscription:</strong></p>
+            <p>If you ever need to update your payment info or cancel, you can do so anytime:</p>
+            <p><a href="${portalUrl}">Manage My Subscription</a></p>
+            <p>Or email us at <a href="mailto:info@directconnectaccess.com">info@directconnectaccess.com</a> and we'll help you out.</p>
+            <br>
+            <p>Thanks again for being part of the DirectConnect Access family.</p>
+            <p>With gratitude,<br>The DirectConnect Access Team<br><a href="https://directconnectaccess.com">directconnectaccess.com</a></p>
+          `,
+        };
+
+        try {
+          await transporter.sendMail(mailOptions);
+          console.log("Confirmation email sent to:", customer.email);
+        } catch (emailError) {
+          console.error("Error sending email:", emailError);
+        }
         break;
-      case 'invoice.payment_failed':
+      }
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const customer = await stripe.customers.retrieve(invoice.customer);
         console.log("Payment failed for:", customer.email);
         await manageSubscriber(customer, invoice, false);
+
+         // Create a Stripe Customer Portal session for them to fix payment
+         const portalSession = await stripe.billingPortal.sessions.create({
+            customer: customer.id,
+            return_url: `${functions.config().next.public_app_url || 'http://localhost:3000'}/`,
+          });
+          const portalUrl = portalSession.url;
+
+        const mailOptionsFailed = {
+            from: '"DirectConnect Access" <info@directconnectaccess.com>',
+            to: customer.email,
+            subject: "Action Required: Your DirectConnect Access Payment Failed",
+            html: `
+              <p>Hi ${customer.name},</p>
+              <p>We were unable to process the recent payment for your DirectConnect Access subscription. This may be due to an expired card or insufficient funds.</p>
+              <p>To avoid any interruption in service for your loved one, please update your payment information as soon as possible.</p>
+              <p><a href="${portalUrl}">Update Payment Information</a></p>
+              <p>If you have any questions, please contact us at <a href="mailto:info@directconnectaccess.com">info@directconnectaccess.com</a>.</p>
+              <p>Sincerely,<br>The DirectConnect Access Team</p>
+            `,
+        };
+        try {
+            await transporter.sendMail(mailOptionsFailed);
+            console.log("Payment failure email sent to:", customer.email);
+        } catch (emailError) {
+            console.error("Error sending payment failure email:", emailError);
+        }
         break;
+      }
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        const customer = await stripe.customers.retrieve(subscription.customer);
+        console.log("Subscription cancelled for:", customer.email);
+        
+        // Pass empty object for invoice as it doesn't exist here
+        await manageSubscriber(customer, {}, false);
+
+        const mailOptionsCancelled = {
+            from: '"DirectConnect Access" <info@directconnectaccess.com>',
+            to: customer.email,
+            subject: "Your DirectConnect Access Subscription Has Been Cancelled",
+            html: `
+              <p>Hi ${customer.name},</p>
+              <p>This email confirms that your subscription to DirectConnect Access has been successfully cancelled. Your access will continue until the end of the current billing period.</p>
+              <p>Thank you for being a part of the DirectConnect Access family. We hope to see you again in the future.</p>
+              <p>If you have any questions, or if you did not intend to cancel, please contact us immediately at <a href="mailto:info@directconnectaccess.com">info@directconnectaccess.com</a>.</p>
+              <p>Sincerely,<br>The DirectConnect Access Team</p>
+            `,
+        };
+        try {
+            await transporter.sendMail(mailOptionsCancelled);
+            console.log("Cancellation confirmation email sent to:", customer.email);
+        } catch (emailError) {
+            console.error("Error sending cancellation email:", emailError);
+        }
+        break;
+      }
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
