@@ -6,57 +6,6 @@ import { useSearchParams } from 'next/navigation';
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
-  const [isDataSaved, setIsDataSaved] = useState(false);
-  const [saveError, setSaveError] = useState('');
-
-  useEffect(() => {
-    const savePaymentData = async () => {
-      if (!sessionId || isDataSaved) return;
-
-      try {
-        // Get session data from Stripe (you'd need to create this endpoint)
-        const sessionResponse = await fetch(`/api/get-session?session_id=${sessionId}`);
-        if (!sessionResponse.ok) {
-          throw new Error('Failed to get session data');
-        }
-        
-        const sessionData = await sessionResponse.json();
-        
-        // Save to Firestore
-        const saveResponse = await fetch('/api/save-payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            subscriberName: `${sessionData.customerData?.firstName || ''} ${sessionData.customerData?.lastName || ''}`.trim(),
-            email: sessionData.customerData?.email || '',
-            phoneNumber: sessionData.customerData?.phoneNumber || '',
-            inmateName: sessionData.customerData?.inmateName || '',
-            inmateId: sessionData.customerData?.inmateId || '',
-            inmateLocation: sessionData.customerData?.inmateLocation || '',
-            facilityName: sessionData.customerData?.facilityName || '',
-            paymentStatus: 'Success',
-            amountPaid: sessionData.amountPaid || process.env.PRODUCT_PRICE || '20',
-            stripeSessionId: sessionId,
-            customerId: sessionData.customerId || ''
-          }),
-        });
-
-        if (saveResponse.ok) {
-          setIsDataSaved(true);
-          console.log('Payment data saved to Firestore successfully');
-        } else {
-          throw new Error('Failed to save payment data');
-        }
-      } catch (error) {
-        console.error('Error saving payment data:', error);
-        setSaveError('Failed to save payment data');
-      }
-    };
-
-    savePaymentData();
-  }, [sessionId, isDataSaved]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center py-12">
@@ -85,16 +34,6 @@ function SuccessContent() {
               </svg>
               <span className="font-semibold">Your subscription is now active</span>
             </div>
-            {isDataSaved && (
-              <div className="mt-2 text-sm text-green-700">
-                ✓ Payment data saved successfully
-              </div>
-            )}
-            {saveError && (
-              <div className="mt-2 text-sm text-red-700">
-                ⚠ {saveError}
-              </div>
-            )}
           </div>
           
           <a

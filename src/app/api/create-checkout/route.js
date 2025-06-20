@@ -129,8 +129,6 @@
 
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, updateDoc } from "firebase/firestore";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -175,7 +173,7 @@ export async function POST(request) {
       customer = existingCustomers.data[0];
 
       // Update customer information if needed
-      const updatedCustomer = await stripe.customers.update(customer.id, {
+      await stripe.customers.update(customer.id, {
         name: `${firstName} ${lastName}`,
         phone: phoneNumber || undefined,
         metadata: {
@@ -188,10 +186,6 @@ export async function POST(request) {
           lastUpdated: new Date().toISOString(),
         },
       });
-      customer = updatedCustomer;
-      console.log(
-        `Using existing customer: ${customer.id} for email: ${email}`
-      );
     } else {
       // Create new customer
       customer = await stripe.customers.create({
@@ -211,23 +205,6 @@ export async function POST(request) {
 
       console.log(`Created new customer: ${customer.id} for email: ${email}`);
     }
-
-    // Prepare initial payment record in Firebase with 'failed'
-    const paymentsCollection = collection(db, "payments");
-    const paymentDoc = doc(paymentsCollection); // auto-ID
-    await setDoc(paymentDoc, {
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-      inmateName,
-      inmateId,
-      inmateLocation,
-      facilityName,
-      amount: 100, // or whatever amount you want
-      status: "failed",
-      createdAt: new Date(),
-    });
 
     // Get the base URL for redirects
     const baseUrl =
@@ -250,29 +227,18 @@ export async function POST(request) {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID,
+          price: "price_1Rc83xDIiIX8ElFZNW4b6b7j",
           quantity: 1,
         },
       ],
-      mode: "payment",
+      mode: 'subscription',
+      subscription_data: {
+        metadata: {
+          inmateId: inmateId || "",
+        }
+      },
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/cancel`,
-      metadata: {
-        customerId: customer.id,
-        firstName: firstName,
-        lastName: lastName,
-        phoneNumber: phoneNumber || "",
-        inmateName: inmateName || "",
-        inmateId: inmateId || "",
-        inmateLocation: inmateLocation || "",
-        facilityName: facilityName || "",
-      },
-    });
-
-    // Update the payment's status to 'pending'
-    await updateDoc(paymentDoc, {
-      status: "pending",
-      checkoutId: session.id,
     });
 
     return NextResponse.json({
