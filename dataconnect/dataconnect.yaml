@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "directconnectaccess"
+location: "asia-east2"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "directconnectaccess-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]
