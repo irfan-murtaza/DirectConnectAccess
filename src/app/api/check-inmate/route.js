@@ -12,18 +12,21 @@ export async function GET(request) {
     );
   }
 
+  // Clean the inmateId by removing dashes
+  const cleanedInmateId = inmateId.replace(/-/g, "");
+
   try {
     // 1. Query payments where inmateId matches
     const paymentsQuery = query(
-      collection(db, "payments"),
-      where("inmateId", "==", inmateId)
+      collection(db, "subscribers"),
+      where("inmateId", "==", cleanedInmateId)
     );
 
     const querySnapshot = await getDocs(paymentsQuery);
 
     if (querySnapshot.empty) {
       return new Response(
-        JSON.stringify({ error: "No payments found for this inmate" }),
+        JSON.stringify({ error: "No subscriber found for this inmate" }),
         { status: 404, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -31,15 +34,19 @@ export async function GET(request) {
     // 2. Get the first matching payment (or loop if multiple)
     const paymentData = querySnapshot.docs[0].data();
 
-    // 3. Prepare response (customize as needed)
+    // 3. Prepare response with all specified details
     const responseData = {
-      active: inmateId === "663-75-78" ? true : paymentData.active || false,
-      inmateId: inmateId,
-      paymentStatus: paymentData.paymentStatus || "Unknown",
-      amountPaid: paymentData.amountPaid || "0",
+      active: paymentData.active || false,
+      amountPaid: paymentData.amountPaid ?? 0,
+      email: paymentData.email || "",
+      firstName: paymentData.firstName || "",
+      inmateId: cleanedInmateId,
+      inmateLocation: paymentData.inmateLocation || "",
       inmateName: paymentData.inmateName || "",
-      // Include other fields you need
-      ...paymentData,
+      lastName: paymentData.lastName || "",
+      lastUpdated: paymentData.lastUpdated || null,
+      phoneNumber: paymentData.phoneNumber || "",
+      stripeCustomerId: paymentData.stripeCustomerId || "",
     };
 
     return new Response(JSON.stringify(responseData), {
