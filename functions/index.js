@@ -83,10 +83,18 @@ exports.stripeWebhook = functions.https.onRequest(async (request, response) => {
         console.log("Payment succeeded for:", customer.email);
         await manageSubscriber(customer, invoice, true);
 
+        // Explicitly check for config and throw error if missing
+        const appUrl = functions.config().next.public.app_url;
+        console.log("appUrl: ", appUrl)
+        if (!appUrl) {
+          console.error("CRITICAL: 'next.public.app_url' is not set in Firebase function configuration. Cannot create customer portal link.");
+          throw new Error("Server configuration error: App URL is not set.");
+        }
+
         // Create a Stripe Customer Portal session
         const portalSession = await stripe.billingPortal.sessions.create({
           customer: customer.id,
-          return_url: `${functions.config().next.public_app_url || 'http://localhost:3000'}/`,
+          return_url: appUrl,
         });
         const portalUrl = portalSession.url;
 
@@ -127,13 +135,22 @@ exports.stripeWebhook = functions.https.onRequest(async (request, response) => {
         console.log("Payment failed for:", customer.email);
         await manageSubscriber(customer, invoice, false);
 
+        // Explicitly check for config and throw error if missing
+        const appUrl = functions.config().next.public.app_url;
+        console.log("appUrl: ", appUrl)
+        if (!appUrl) {
+          console.error("CRITICAL: 'next.public.app_url' is not set in Firebase function configuration. Cannot create customer portal link.");
+          throw new Error("Server configuration error: App URL is not set.");
+        }
+
          // Create a Stripe Customer Portal session for them to fix payment
          const portalSession = await stripe.billingPortal.sessions.create({
             customer: customer.id,
-            return_url: `${functions.config().next.public_app_url || 'http://localhost:3000'}/`,
+            return_url: appUrl,
           });
           const portalUrl = portalSession.url;
-
+          console.log("portalUrl: ", portalUrl)
+          console.log("customer.email: ", portalSession) 
         const mailOptionsFailed = {
             from: '"DirectConnect Access" <info@directconnectaccess.com>',
             to: customer.email,
@@ -155,6 +172,35 @@ exports.stripeWebhook = functions.https.onRequest(async (request, response) => {
         }
         break;
       }
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        if (subscription.cancel_at_period_end) {
+          const customer = await stripe.customers.retrieve(subscription.customer);
+          console.log("Subscription cancellation scheduled for:", customer.email);
+          
+          const mailOptionsScheduledCancellation = {
+              from: '"DirectConnect Access" <info@directconnectaccess.com>',
+              to: customer.email,
+              subject: "Your DirectConnect Access Subscription is Scheduled for Cancellation",
+              html: `
+                <p>Hi ${customer.name},</p>
+                <p>This email confirms that your subscription to DirectConnect Access has been scheduled to cancel at the end of your current billing period. Your access will continue until then.</p>
+                <p>If you have any questions, or if you did not intend to do this, you can resume your subscription from the customer portal.</p>
+                <p>Or email us at <a href="mailto:info@directconnectaccess.com">info@directconnectaccess.com</a> and we'll help you out.</p>
+                <br>
+                <p>Thanks again for being part of the DirectConnect Access family.</p>
+                <p>With gratitude,<br>The DirectConnect Access Team<br><a href="https://directconnectaccess.com">directconnectaccess.com</a></p>
+              `,
+          };
+          try {
+              await transporter.sendMail(mailOptionsScheduledCancellation);
+              console.log("Cancellation scheduled email sent to:", customer.email);
+          } catch (emailError) {
+              console.error("Error sending cancellation scheduled email:", emailError);
+          }
+        }
+        break;
+      }
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
         const customer = await stripe.customers.retrieve(subscription.customer);
@@ -169,10 +215,13 @@ exports.stripeWebhook = functions.https.onRequest(async (request, response) => {
             subject: "Your DirectConnect Access Subscription Has Been Cancelled",
             html: `
               <p>Hi ${customer.name},</p>
-              <p>This email confirms that your subscription to DirectConnect Access has been successfully cancelled. Your access will continue until the end of the current billing period.</p>
+              <p>This email confirms that your subscription to DirectConnect Access has been successfully cancelled, and you will not be billed again.</p>
               <p>Thank you for being a part of the DirectConnect Access family. We hope to see you again in the future.</p>
               <p>If you have any questions, or if you did not intend to cancel, please contact us immediately at <a href="mailto:info@directconnectaccess.com">info@directconnectaccess.com</a>.</p>
-              <p>Sincerely,<br>The DirectConnect Access Team</p>
+              <p>Or email us at <a href="mailto:info@directconnectaccess.com">info@directconnectaccess.com</a> and we'll help you out.</p>
+              <br>
+              <p>Thanks again for being part of the DirectConnect Access family.</p>
+              <p>With gratitude,<br>The DirectConnect Access Team<br><a href="https://directconnectaccess.com">directconnectaccess.com</a></p>
             `,
         };
         try {
