@@ -61,6 +61,12 @@ export default function CheckoutForm() {
       setIsLoading(false);
       return;
     }
+    // Validate inmateId is present and a valid number
+    if (!formData.inmateId || isNaN(formData.inmateId) || Number(formData.inmateId) <= 0) {
+      setError("Please enter a valid Inmate ID (number)");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/create-checkout", {
@@ -254,14 +260,25 @@ export default function CheckoutForm() {
                   htmlFor="inmateId"
                   className="block text-sm font-semibold text-slate-900"
                 >
-                  Inmate ID
+                  Inmate ID <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   id="inmateId"
                   name="inmateId"
                   value={formData.inmateId}
                   onChange={handleInputChange}
+                  required
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onKeyDown={(e) => {
+                    // Block: e, E, +, -, .
+                    if (["e", "E", "+", "-", "."].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
                   className="w-full px-4 py-3 text-slate-900 bg-white border-2 border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 placeholder:text-slate-400"
                   placeholder="Enter inmate ID number"
                 />
