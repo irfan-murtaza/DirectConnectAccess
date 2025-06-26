@@ -13,13 +13,13 @@ export async function GET(request) {
   }
 
   // Clean the inmateId by removing dashes
-  const cleanedInmateId = inmateId.replace(/-/g, "");
+  // const cleanedInmateId = inmateId.replace(/-/g, "");
 
   try {
     // 1. Query payments where inmateId matches
     const paymentsQuery = query(
       collection(db, "subscribers"),
-      where("inmateId", "==", cleanedInmateId)
+      where("inmateId", "==", inmateId)
     );
 
     const querySnapshot = await getDocs(paymentsQuery);
@@ -40,7 +40,7 @@ export async function GET(request) {
       amountPaid: paymentData.amountPaid ?? 0,
       email: paymentData.email || "",
       firstName: paymentData.firstName || "",
-      inmateId: cleanedInmateId,
+      inmateId: inmateId,
       inmateLocation: paymentData.inmateLocation || "",
       inmateName: paymentData.inmateName || "",
       lastName: paymentData.lastName || "",
