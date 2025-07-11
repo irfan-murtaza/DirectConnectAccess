@@ -13,8 +13,8 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false, // true for 465, false for other ports
   auth: {
-    user: "irfantech456@gmail.com", // Your email address
-    pass: "wukc dqtl unlu ingb", // Your app password
+    user: "info@directconnectaccess.com", // Your email address
+    pass: "ibge lodg ohqz hveb", // Your app password
   },
 });
 
