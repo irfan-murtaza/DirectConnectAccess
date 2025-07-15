@@ -112,7 +112,7 @@ export async function POST(request) {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: "price_1Rc83xDIiIX8ElFZNW4b6b7j",
+          price: process.env.STRIPE_PRICE_ID,
           quantity: 1,
         },
       ],
