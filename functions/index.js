@@ -172,21 +172,11 @@ exports.stripeWebhook = functions.https.onRequest(async (request, response) => {
         }
         break;
       }
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         if (subscription.cancel_at_period_end) {
           const customer = await stripe.customers.retrieve(subscription.customer);
           console.log("Subscription cancellation scheduled for:", customer.email);
-<<<<<<< Updated upstream
-          
-=======
-
->>>>>>> Stashed changes
           const mailOptionsScheduledCancellation = {
               from: '"DirectConnect Access" <info@directconnectaccess.com>',
               to: customer.email,
@@ -210,10 +200,6 @@ exports.stripeWebhook = functions.https.onRequest(async (request, response) => {
         }
         break;
       }
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
         const customer = await stripe.customers.retrieve(subscription.customer);
